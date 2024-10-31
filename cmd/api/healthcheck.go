@@ -6,7 +6,6 @@ import (
 )
 
 func (a *applicationDependencies) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	panic("Apples")
 	data := envelope{
 		"status": "avaliable",
 		"system_info": map[string]string{

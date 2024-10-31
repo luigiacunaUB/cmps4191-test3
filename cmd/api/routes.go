@@ -17,8 +17,9 @@ func (a *applicationDependencies) routes() http.Handler {
 	//405
 	router.MethodNotAllowed = http.HandlerFunc(a.methodNotAllowedResponse)
 	//routes
-	router.HandlerFunc(http.MethodGet, "/", a.Index) //root page
-	router.HandlerFunc(http.MethodGet, "/healthcheck", a.healthCheckHandler)
+	router.HandlerFunc(http.MethodGet, "/", a.Index)                         //root page
+	router.HandlerFunc(http.MethodGet, "/healthcheck", a.healthCheckHandler) //healthcheck
+	router.HandlerFunc(http.MethodPost, "/product", a.createProduct)
 
 	return a.recoverPanic(router)
 }
