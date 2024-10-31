@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -11,9 +10,9 @@ func (a *applicationDependencies) createProduct(w http.ResponseWriter, r *http.R
 		ProductName string `json:"productname`
 	}
 
-	err := json.NewDecoder(r.Body).Decode(&incomingData)
+	err := a.readJSON(w, r, &incomingData)
 	if err != nil {
-		a.errorResponseJSON(w, r, http.StatusBadRequest, err.Error())
+		a.badRequestResponse(w, r, err)
 		return
 	}
 
