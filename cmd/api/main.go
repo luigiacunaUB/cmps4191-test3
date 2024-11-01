@@ -14,6 +14,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/luigiacunaUB/cmps4191-test3/internal/data"
 )
 
 const appVersion = "1.0.0"
@@ -27,8 +28,9 @@ type serverConfig struct {
 }
 
 type applicationDependencies struct {
-	config serverConfig
-	logger *slog.Logger //look more into this later
+	config       serverConfig
+	logger       *slog.Logger //look more into this later
+	ProductModel data.ProductModel
 }
 
 func main() {

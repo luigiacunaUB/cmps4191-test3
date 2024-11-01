@@ -9,6 +9,7 @@ import (
 )
 
 func (a *applicationDependencies) createProduct(w http.ResponseWriter, r *http.Request) {
+	a.logger.Info("Inside createProduct")
 	var incomingData struct {
 		ProdName string `json:"productname"`
 	}
@@ -21,6 +22,7 @@ func (a *applicationDependencies) createProduct(w http.ResponseWriter, r *http.R
 	product := &data.Product{
 		ProdName: incomingData.ProdName,
 	}
+	a.logger.Info(incomingData.ProdName)
 
 	v := validator.New()
 
@@ -28,7 +30,26 @@ func (a *applicationDependencies) createProduct(w http.ResponseWriter, r *http.R
 	if !v.IsEmpty() {
 		a.failedValidationResponse(w, r, v.Errors)
 		return
+	} else {
+		a.logger.Info("Validate Product Pass")
 	}
 
+	err = a.ProductModel.Insert(product)
+	if err != nil {
+		a.serverErrorResponse(w, r, err)
+		return
+	} else {
+		a.logger.Info("Insert Pass")
+	}
 	fmt.Fprintf(w, "%+v\n", incomingData)
+	headers := make(http.Header)
+	headers.Set("Location", fmt.Sprintf("/product/%d", product.ID))
+
+	data := envelope{
+		"productname": product,
+	}
+	err = a.writeJSON(w, http.StatusCreated, data, headers)
+	if err != nil {
+		a.serverErrorResponse(w, r, err)
+	}
 }
