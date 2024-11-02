@@ -44,9 +44,18 @@ func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
+	db, err := openDB(settings)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+	defer db.Close()
+	logger.Info("database connection pool established")
+
 	appInstance := &applicationDependencies{
-		config: settings,
-		logger: logger,
+		config:       settings,
+		logger:       logger,
+		ProductModel: data.ProductModel{DB: db},
 	}
 
 	//api server info
@@ -60,13 +69,6 @@ func main() {
 	}
 
 	logger.Info("starting server", "address", apiServer.Addr, "enviroment", settings.enviroment)
-	db, err := openDB(settings)
-	if err != nil {
-		logger.Error(err.Error())
-		os.Exit(1)
-	}
-	defer db.Close()
-	logger.Info("database connection pool established")
 
 	err = apiServer.ListenAndServe()
 

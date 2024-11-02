@@ -45,5 +45,5 @@ func (p ProductModel) Insert(product *Product) error {
 		logger.Error("Database connection is nil")
 		return fmt.Errorf("database connection is nil")
 	}
-	return p.DB.QueryRowContext(ctx, query, args...).Scan(&product.ID, &product.AddedDate)
+	return p.DB.QueryRowContext(ctx, query, args...).Scan(&product.ID,&product.AddedDate)
 }
