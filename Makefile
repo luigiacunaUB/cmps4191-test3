@@ -15,16 +15,16 @@ db/psql:
 .PHONY: db/migrations/new
 db/migrations/new:
 	@echo 'Creating Database Migrations for $(name)'
-	migrate create -seq -ext=.sql -dir=./migrate $(name)
+	migrate create -seq -ext=.sql -dir=./migrations $(name)
 
 #up migrations
 .PHONY: db/migrations/up
 db/migrations/up:
 	@echo 'running up migrations'
-	migrate -path ./migrate -database $(AMAZON_DB_DSN) up
+	migrate -path ./migrations -database $(AMAZON_DB_DSN) up
 
 #down migrations
 .PHONY: db/migrations/down
 db/migrations/down:
 	@echo 'running down migrations'
-	migrate -path ./migrate -database $(AMAZON_DB_DSN) down
+	migrate -path ./migrations -database $(AMAZON_DB_DSN) down

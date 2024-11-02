@@ -27,7 +27,7 @@ func (a *applicationDependencies) createProduct(w http.ResponseWriter, r *http.R
 
 	v := validator.New()
 
-	data.ValidateProduct(v, product)
+	data.ValidateProduct(v, a.ProductModel, product)
 	if !v.IsEmpty() {
 		a.failedValidationResponse(w, r, v.Errors)
 		return
@@ -111,7 +111,7 @@ func (a *applicationDependencies) updateProductHandler(w http.ResponseWriter, r 
 	}
 
 	v := validator.New()
-	data.ValidateProduct(v, product)
+	data.ValidateProduct(v, a.ProductModel, product)
 	if !v.IsEmpty() {
 		a.failedValidationResponse(w, r, v.Errors)
 		return
@@ -134,29 +134,63 @@ func (a *applicationDependencies) updateProductHandler(w http.ResponseWriter, r 
 
 }
 
-func (a *applicationDependencies)deleteProductHandler(w http.ResponseWriter,r *http.Request){
-	id,err := a.readIDParam(r)
-	if err != nil{
-		a.notFoundResponse(w,r)
+func (a *applicationDependencies) deleteProductHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := a.readIDParam(r)
+	if err != nil {
+		a.notFoundResponse(w, r)
 		return
 	}
 
 	err = a.ProductModel.Delete(id)
 
-	if err != nil{
-		switch{
+	if err != nil {
+		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			a.notFoundResponse(w,r)
+			a.notFoundResponse(w, r)
 		default:
-			a.serverErrorResponse(w,r,err)
+			a.serverErrorResponse(w, r, err)
 		}
 	}
 	data := envelope{
-		"message":"product deleted",
+		"message": "product deleted",
 	}
 
-	err = a.writeJSON(w,http.StatusOK,data,nil)
-	if err != nil{
-		a.serverErrorResponse(w,r,err)
+	err = a.writeJSON(w, http.StatusOK, data, nil)
+	if err != nil {
+		a.serverErrorResponse(w, r, err)
 	}
+}
+func (a *applicationDependencies) displayAllProductHandler(w http.ResponseWriter, r *http.Request) {
+	products, err := a.ProductModel.DisplayAll()
+
+	if err != nil {
+		switch {
+		case errors.Is(err, data.QueryFail):
+			a.notFoundResponse(w, r)
+		default:
+			a.serverErrorResponse(w, r, err)
+
+		}
+	}
+	prodCount := len(products)
+	a.logger.Info("Product Table Count: ", prodCount)
+
+	if prodCount == 0 {
+		data := envelope{
+			"message": "there is no products",
+		}
+		err = a.writeJSON(w, http.StatusOK, data, nil)
+		if err != nil {
+			a.serverErrorResponse(w, r, err)
+		}
+	} else {
+		data := envelope{
+			"Product": products,
+		}
+		err = a.writeJSON(w, http.StatusOK, data, nil)
+		if err != nil {
+			a.serverErrorResponse(w, r, err)
+		}
+	}
+
 }
