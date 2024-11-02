@@ -74,3 +74,15 @@ func (p ProductModel) Get(id int64) (*Product, error) {
 	}
 	return &product, nil
 }
+
+func (p ProductModel) Update(product *Product) error {
+	query := `UPDATE product
+			SET prodname = $1
+			WHERE id = $2
+			RETURNING id
+			`
+	args := []any{product.ProdName, product.ID}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	return p.DB.QueryRowContext(ctx, query, args...).Scan(&product.ID)
+}
