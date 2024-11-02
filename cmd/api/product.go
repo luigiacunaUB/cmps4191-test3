@@ -133,3 +133,30 @@ func (a *applicationDependencies) updateProductHandler(w http.ResponseWriter, r 
 	}
 
 }
+
+func (a *applicationDependencies)deleteProductHandler(w http.ResponseWriter,r *http.Request){
+	id,err := a.readIDParam(r)
+	if err != nil{
+		a.notFoundResponse(w,r)
+		return
+	}
+
+	err = a.ProductModel.Delete(id)
+
+	if err != nil{
+		switch{
+		case errors.Is(err, data.ErrRecordNotFound):
+			a.notFoundResponse(w,r)
+		default:
+			a.serverErrorResponse(w,r,err)
+		}
+	}
+	data := envelope{
+		"message":"product deleted",
+	}
+
+	err = a.writeJSON(w,http.StatusOK,data,nil)
+	if err != nil{
+		a.serverErrorResponse(w,r,err)
+	}
+}
