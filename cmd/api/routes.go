@@ -19,7 +19,8 @@ func (a *applicationDependencies) routes() http.Handler {
 	//routes
 	router.HandlerFunc(http.MethodGet, "/", a.Index)                         //root page
 	router.HandlerFunc(http.MethodGet, "/healthcheck", a.healthCheckHandler) //healthcheck
-	router.HandlerFunc(http.MethodPost, "/product", a.createProduct)
+	router.HandlerFunc(http.MethodPost, "/product", a.createProduct)		 //add product
+	router.HandlerFunc(http.MethodGet,"/product/:id",a.displayProductHandler)
 
 	return a.recoverPanic(router)
 }

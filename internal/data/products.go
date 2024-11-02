@@ -3,11 +3,13 @@ package data
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"time"
 
+	//"github.com/luigiacunaUB/cmps4191-test3/internal/errors"
 	"github.com/luigiacunaUB/cmps4191-test3/internal/validator"
 )
 
@@ -45,5 +47,30 @@ func (p ProductModel) Insert(product *Product) error {
 		logger.Error("Database connection is nil")
 		return fmt.Errorf("database connection is nil")
 	}
-	return p.DB.QueryRowContext(ctx, query, args...).Scan(&product.ID,&product.AddedDate)
+	return p.DB.QueryRowContext(ctx, query, args...).Scan(&product.ID, &product.AddedDate)
+}
+
+func (p ProductModel) Get(id int64) (*Product, error) {
+	if id < 1 {
+		return nil, ErrRecordNotFound
+	}
+	query := `SELECT id,prodname,addeddate
+			FROM product
+			WHERE id = $1
+			`
+	var product Product
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := p.DB.QueryRowContext(ctx, query, id).Scan(&product.ID, &product.ProdName, &product.AddedDate)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+	return &product, nil
 }

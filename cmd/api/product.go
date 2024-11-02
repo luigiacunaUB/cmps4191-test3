@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -51,5 +52,30 @@ func (a *applicationDependencies) createProduct(w http.ResponseWriter, r *http.R
 	err = a.writeJSON(w, http.StatusCreated, data, headers)
 	if err != nil {
 		a.serverErrorResponse(w, r, err)
+	}
+}
+
+func (a *applicationDependencies)displayProductHandler(w http.ResponseWriter,r *http.Request){
+	id,err := a.readIDParam(r)
+	if err != nil{
+		a.notFoundResponse(w,r)
+		return
+	}
+	product,err:= a.ProductModel.Get(id)
+	if err != nil{
+		switch{
+		case errors.Is(err,data.ErrRecordNotFound):
+			a.notFoundResponse(w,r)
+		default:
+			a.serverErrorResponse(w,r,err)
+		}
+	}
+	data:= envelope{
+		"productname":product,
+	}
+	err = a.writeJSON(w,http.StatusOK,data,nil)
+	if err != nil{
+		a.serverErrorResponse(w,r,err)
+		return
 	}
 }
