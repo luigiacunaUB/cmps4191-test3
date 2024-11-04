@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -18,22 +17,18 @@ type ProductModel struct {
 	logger *slog.Logger
 }
 
+// The Product Model now contains fields of both product and prodratings table, setting
 type Product struct {
 	ID        int64     `json:"productid"`
 	ProdName  string    `json:"productname"`
 	Category  string    `json:"category"`
 	ImgURL    string    `json:"imageurl"`
-	AvgRating int       `json:"averagerating"`
+	Rating    int       `json:"rating"`
 	AddedDate time.Time `json:"-"`
 }
 
-type ProductRatingModel struct {
-	ID     int64 `json:"ratingid"`
-	ProdID int64 `json:"prodid"`
-	Rating int64 `json:"rating"`
-}
-
 func ValidateProduct(v *validator.Validator, p ProductModel, product *Product) {
+
 	v.Check(product.ProdName != "", "productname", "must be provided")
 	v.Check(len(product.ProdName) <= 25, "productname", "must not be more than 25 bytes long")
 
@@ -43,46 +38,84 @@ func ValidateProduct(v *validator.Validator, p ProductModel, product *Product) {
 	v.Check(product.ImgURL != "", "imageurl", "must be provided")
 	v.Check(len(product.ImgURL) <= 100, "imageurl", "must not be more than 100 bytes long")
 
-	exists, err := p.CheckIfProdExist(product.ProdName)
-
-	if err != nil {
-		v.Check(false, product.ProdName, "not found")
-	}
-
-	if exists {
-		v.Check(false, product.ProdName, "found")
-	}
+	v.Check(product.Rating >= 1 && product.Rating <= 5, "rating", "must be between 1 and 5")
 
 }
 
-func (p ProductModel) Insert(product *Product) error {
+func (p ProductModel) Insert(product *Product, instruction bool) error {
+	// Initialize logger
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	logger.Info("Inside Insert Func")
-	logger.Info("Insert parameters", "productname", product.ProdName)
-	/*query := `INSERT INTO product(prodname,category,imgurl)
-	VALUES ($1,$2,$3,$4)
-	RETURNING id,addeddate
-	`*/
+	//---------------------------------------------------------------------------------
+	//set the senario up do insert of product and rating
+	if instruction == false {
+		//using a transaction to process two queries, if one fails rollback
+		logger.Info("Inserting a new product and adding a rating")
+		tx, err := p.DB.Begin()
+		if err != nil {
+			logger.Error("Cannot begin Transaction")
+			return err
+		}
 
-	query:=`INSERT INTO product(prodname,category,imgurl)
-			VALUES('phone','device','theurl');
-			INSERT INTO prodratings(prodid,rating) VALUES(1,5);`
-	args := []any{product.ProdName, product.Category, product.ImgURL}
-	logger.Info("Insert parameters", "productname", args)
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	logger.Info("reaches here")
-	if p.DB == nil {
-		logger.Error("Database connection is nil")
-		return fmt.Errorf("database connection is nil")
+		//first query
+		firstquery := `INSERT INTO product(prodname,category,imgurl) VALUES($1,$2,$3) RETURNING id,addeddate`
+		err = tx.QueryRow(firstquery, product.ProdName, product.Category, product.ImgURL).Scan(&product.ID, &product.AddedDate)
+		//incase it errors out
+		if err != nil {
+			logger.Error("INSERT INTO product FAILED ABORTING!")
+			return err
+		}
+
+		secondquery := `INSERT INTO prodratings(prodid,rating) VALUES($1,$2)`
+		_, err = tx.Exec(secondquery, product.ID, product.Rating)
+		err = tx.Commit()
+		if err != nil {
+			logger.Error("INSERT INTO prodrating FAILED ABORTING!")
+			//need to implement delete if the insert did pass to keep db clean
+			return err
+		}
+		//------------------------------------------------------------------------------------------
+	} else if instruction == true {
+		//only do the rating
+		logger.Info("Only adding a rating for a existing product")
+		//need to do a double query
+		//1. Get the item id for the existing id and pass into a variable
+		//2. with the variable created make the insertion
+
+		tx, err := p.DB.Begin()
+		if err != nil {
+			logger.Error("Cannot begin Transaction")
+			return err
+		}
+
+		//first query getting the product id in question to pass into a variable
+		firstquery := `SELECT id FROM product WHERE prodname=($1)`
+		err = tx.QueryRow(firstquery, product.ProdName).Scan(&product.ID)
+		//incase it errors out
+		if err != nil {
+			logger.Error("SELECT failed")
+			return err
+		}
+		secondquery := `INSERT INTO prodratings(prodid,rating) VALUES($1,$2)`
+		_, err = tx.Exec(secondquery, product.ID, product.Rating)
+		err = tx.Commit()
+		if err != nil {
+			logger.Error("INSERT INTO prodrating FAILED ABORTING!")
+			//need to implement delete if the insert did pass to keep db clean
+			return err
+		}
+
 	}
-	return p.DB.QueryRowContext(ctx, query, args...).Scan(&product.ID, &product.AddedDate)
+	return nil
+
 }
 
 func (p ProductModel) Get(id int64) (*Product, error) {
+	p.logger.Info("Inside Get Function")
 	if id < 1 {
 		return nil, ErrRecordNotFound
 	}
+	p.logger.Info("id inside Get: ", id)
 	query := `SELECT id,prodname,category,imgurl,category,addeddate
 			FROM product
 			WHERE id = $1

@@ -11,8 +11,11 @@ import (
 
 func (a *applicationDependencies) createProduct(w http.ResponseWriter, r *http.Request) {
 	a.logger.Info("Inside createProduct")
-	var incomingData struct {
-		ProdName string `json:"productname"`
+	var incomingData struct { //pushes into
+		ProdName string `json:"productname"` //product table
+		Category string `json:"category"`    //product table
+		ImgURL   string `json:"imageurl"`    //product table
+		Rating   int    `json:"rating"`      //prodratings table
 	}
 
 	err := a.readJSON(w, r, &incomingData)
@@ -22,8 +25,11 @@ func (a *applicationDependencies) createProduct(w http.ResponseWriter, r *http.R
 	}
 	product := &data.Product{
 		ProdName: incomingData.ProdName,
+		Category: incomingData.Category,
+		ImgURL:   incomingData.ImgURL,
+		Rating:   incomingData.Rating,
 	}
-	a.logger.Info(incomingData.ProdName)
+	a.logger.Info(incomingData.ProdName, incomingData.Category, incomingData.ImgURL, incomingData.Category)
 
 	v := validator.New()
 
@@ -35,19 +41,29 @@ func (a *applicationDependencies) createProduct(w http.ResponseWriter, r *http.R
 		a.logger.Info("Validate Product Pass")
 	}
 
-	err = a.ProductModel.Insert(product)
+	// Check if the product exists
+	exist, err := a.ProductModel.CheckIfProdExist(incomingData.ProdName)
 	if err != nil {
 		a.serverErrorResponse(w, r, err)
 		return
-	} else {
-		a.logger.Info("Insert Pass")
 	}
+
+	// Insert product depending on existence status
+	err = a.ProductModel.Insert(product, exist)
+	if err != nil {
+		a.serverErrorResponse(w, r, err)
+		return
+	}
+
 	fmt.Fprintf(w, "%+v\n", incomingData)
 	headers := make(http.Header)
 	headers.Set("Location", fmt.Sprintf("/product/%d", product.ID))
 
 	data := envelope{
-		"productname": product,
+		"productname": product.ProdName,
+		"category":    product.Category,
+		"rating":      product.Rating,
+		"id":          product.ID,
 	}
 	err = a.writeJSON(w, http.StatusCreated, data, headers)
 	if err != nil {
@@ -56,28 +72,38 @@ func (a *applicationDependencies) createProduct(w http.ResponseWriter, r *http.R
 }
 
 func (a *applicationDependencies) displayProductHandler(w http.ResponseWriter, r *http.Request) {
+	a.logger.Info("Inside displayProductHandler")
+
 	id, err := a.readIDParam(r)
 	if err != nil {
 		a.notFoundResponse(w, r)
 		return
 	}
+	a.logger.Info("displayProductHandler: passed readIDParam")
+	a.logger.Info("ID being checked: ", id)
 	product, err := a.ProductModel.Get(id)
+
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
+			a.logger.Info("Error 1")
 			a.notFoundResponse(w, r)
 		default:
+			a.logger.Info("Error 2")
 			a.serverErrorResponse(w, r, err)
 		}
 	}
+
 	data := envelope{
 		"productname": product,
 	}
+	a.logger.Info("pass here")
 	err = a.writeJSON(w, http.StatusOK, data, nil)
 	if err != nil {
 		a.serverErrorResponse(w, r, err)
 		return
 	}
+
 }
 
 func (a *applicationDependencies) updateProductHandler(w http.ResponseWriter, r *http.Request) {
@@ -160,6 +186,7 @@ func (a *applicationDependencies) deleteProductHandler(w http.ResponseWriter, r 
 		a.serverErrorResponse(w, r, err)
 	}
 }
+
 func (a *applicationDependencies) displayAllProductHandler(w http.ResponseWriter, r *http.Request) {
 	products, err := a.ProductModel.DisplayAll()
 
