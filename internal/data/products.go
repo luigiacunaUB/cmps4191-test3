@@ -111,12 +111,10 @@ func (p ProductModel) Insert(product *Product, instruction bool) error {
 }
 
 func (p ProductModel) Get(id int64) (*Product, error) {
-	p.logger.Info("Inside Get Function")
 	if id < 1 {
 		return nil, ErrRecordNotFound
 	}
-	p.logger.Info("id inside Get: ", id)
-	query := `SELECT id,prodname,category,imgurl,category,addeddate
+	query := `SELECT id,prodname,category,imgurl,addeddate
 			FROM product
 			WHERE id = $1
 			`
@@ -125,7 +123,7 @@ func (p ProductModel) Get(id int64) (*Product, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := p.DB.QueryRowContext(ctx, query, id).Scan(&product.ID, &product.ProdName, &product.AddedDate)
+	err := p.DB.QueryRowContext(ctx, query, id).Scan(&product.ID, &product.ProdName, &product.Category, &product.ImgURL, &product.AddedDate)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):

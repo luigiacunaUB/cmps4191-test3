@@ -72,24 +72,20 @@ func (a *applicationDependencies) createProduct(w http.ResponseWriter, r *http.R
 }
 
 func (a *applicationDependencies) displayProductHandler(w http.ResponseWriter, r *http.Request) {
-	a.logger.Info("Inside displayProductHandler")
+	//a.logger.Info("Inside displayProductHandler")
 
 	id, err := a.readIDParam(r)
 	if err != nil {
 		a.notFoundResponse(w, r)
 		return
 	}
-	a.logger.Info("displayProductHandler: passed readIDParam")
-	a.logger.Info("ID being checked: ", id)
-	product, err := a.ProductModel.Get(id)
 
+	product, err := a.ProductModel.Get(id)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			a.logger.Info("Error 1")
 			a.notFoundResponse(w, r)
 		default:
-			a.logger.Info("Error 2")
 			a.serverErrorResponse(w, r, err)
 		}
 	}
@@ -97,7 +93,7 @@ func (a *applicationDependencies) displayProductHandler(w http.ResponseWriter, r
 	data := envelope{
 		"productname": product,
 	}
-	a.logger.Info("pass here")
+	//a.logger.Info("pass here")
 	err = a.writeJSON(w, http.StatusOK, data, nil)
 	if err != nil {
 		a.serverErrorResponse(w, r, err)
