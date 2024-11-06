@@ -120,6 +120,8 @@ func (a *applicationDependencies) updateProductHandler(w http.ResponseWriter, r 
 
 	var incomingData struct {
 		ProdName *string `json:"productname"`
+		Category *string `json:"category"`
+		ImgURL   *string `json:"imageurl"`
 	}
 
 	err = a.readJSON(w, r, &incomingData)
@@ -130,6 +132,8 @@ func (a *applicationDependencies) updateProductHandler(w http.ResponseWriter, r 
 
 	if incomingData.ProdName != nil {
 		product.ProdName = *incomingData.ProdName
+		product.Category = *incomingData.Category
+		product.ImgURL = *incomingData.ImgURL
 	}
 
 	v := validator.New()

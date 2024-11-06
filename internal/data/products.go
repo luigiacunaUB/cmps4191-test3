@@ -3,7 +3,6 @@ package data
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"log/slog"
 	"os"
 	"time"
@@ -111,34 +110,44 @@ func (p ProductModel) Insert(product *Product, instruction bool) error {
 }
 
 func (p ProductModel) Get(id int64) (*Product, error) {
+	//GET: Gets the item info for a specfic item along with its average rating, coming from prodratings table
 	if id < 1 {
 		return nil, ErrRecordNotFound
 	}
-	query := `SELECT id,prodname,category,imgurl,addeddate
-			FROM product
-			WHERE id = $1
-			`
-	var product Product
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	err := p.DB.QueryRowContext(ctx, query, id).Scan(&product.ID, &product.ProdName, &product.Category, &product.ImgURL, &product.AddedDate)
+	//----------------------------------------------------------------------------------------------
+	//first get the product info from the product table
+	//using transaction to excute mutiple quries
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	tx, err := p.DB.Begin()
 	if err != nil {
-		switch {
-		case errors.Is(err, sql.ErrNoRows):
-			return nil, ErrRecordNotFound
-		default:
-			return nil, err
-		}
+		logger.Info("Cannot Begin Transaction")
 	}
+	var product Product //var hold info needed
+	//first query get the item info
+	selectQuery := `SELECT id,prodname,category,imgurl,addeddate FROM product WHERE id = $1`
+	err = tx.QueryRow(selectQuery, id).Scan(&product.ID, &product.ProdName, &product.Category, &product.ImgURL, &product.AddedDate)
+	if err != nil {
+		logger.Error("ERROR getting product info")
+	}
+	//---------------------------------------------------------------------------------------------------------
+	//second query to pull the average rating
+	averageQuery := `SELECT COALESCE(ROUND(AVG(rating)), 0) AS average_rating FROM prodratings WHERE prodid = $1`
+
+	err = tx.QueryRow(averageQuery, id).Scan(&product.Rating)
+	err = tx.Commit()
+	if err != nil {
+		logger.Error("ERROR getting average rating")
+	}
+	logger.Info("Info", product)
+
 	return &product, nil
 }
 
 func (p ProductModel) Update(product *Product) error {
 	query := `UPDATE product
-			SET prodname = $1, category = $2, imgurl = $3, rating $4
-			WHERE id = $5
+			SET prodname = $1, category = $2, imgurl = $3
+			WHERE id = $4
 			RETURNING id
 			`
 	args := []any{product.ProdName, product.Category, product.ImgURL, product.ID}
@@ -151,28 +160,101 @@ func (p ProductModel) Delete(id int64) error {
 	if id < 1 {
 		return ErrRecordNotFound
 	}
-	query := `DELETE FROM product WHERE id = $1`
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	tx, err := p.DB.Begin()
+	if err != nil {
+		logger.Info("Cannot Begin Transaction")
+	}
+	//for the delete function it will go in reverse, deleting all sub table info, before main table infor
+	//deleting from prodratings
+	DelProdRatingsInfor := `DELETE FROM prodratings WHERE prodid = $1`
+	ratingresult, err := tx.Exec(DelProdRatingsInfor, id)
+	if err != nil {
+		logger.Info("Cannot delete from prodratings")
+		tx.Rollback()
+	}
+	DelProd := `DELETE FROM product WHERE id = $1`
+	productResult, err := tx.Exec(DelProd, id)
+	if err != nil {
+		logger.Info("Cannot delete from product")
+		tx.Rollback()
+	}
+	err = tx.Commit()
+	if err != nil {
+		logger.Info("Error DELETING")
+	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	result, err := p.DB.ExecContext(ctx, query, id)
+	ratingsrAffected, err := ratingresult.RowsAffected()
 	if err != nil {
 		return err
 	}
-	rowsAffected, err := result.RowsAffected()
+
+	rowsAffected, err := productResult.RowsAffected()
 	if err != nil {
 		return err
 	}
 
-	if rowsAffected == 0 {
+	if rowsAffected == 0 || ratingsrAffected == 0 {
 		return ErrRecordNotFound
 	}
 	return nil
+
 }
 
 func (p ProductModel) DisplayAll() ([]Product, error) {
-	query := `SELECT id,prodname,category,imgurl,category,addeddate FROM product`
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger.Info("Inside DisplayAll")
+	var products []Product
+	//---------------------------------------------------------------------------------
+	/*tx, err := p.DB.Begin()
+	if err != nil {
+		logger.Info("Cannot Begin Transaction")
+	}*/
+	/*selectQuery := `SELECT id,prodname,category,imgurl,addeddate FROM product`
+	err = tx.QueryRow(selectQuery).Scan(&product.ID, &product.ProdName, &product.Category, &product.ImgURL, &product.AddedDate)
+	if err != nil {
+		logger.Error("ERROR getting product info")
+	}*/
+
+	// Query to get all product data and the overall average rating for all products
+	query := `
+    SELECT 
+        p.id, p.prodname, p.category, p.imgurl, p.addeddate, 
+        (SELECT AVG(r.rating) FROM prodratings r WHERE r.prodid = p.id) AS rating
+    FROM 
+        product p
+    `
+
+	// Set up a timeout context for the query
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	// Execute the query
+	rows, err := p.DB.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Loop through the rows and scan the results into the products slice
+	for rows.Next() {
+		var product Product
+		err := rows.Scan(&product.ID, &product.ProdName, &product.Category, &product.ImgURL, &product.AddedDate, &product.Rating)
+		if err != nil {
+			return nil, err
+		}
+		products = append(products, product)
+	}
+
+	// Check for any error encountered during iteration
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Return the products slice
+	return products, nil
+
+	/*query := `SELECT id,prodname,category,imgurl,category,addeddate FROM product`
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	rows, err := p.DB.QueryContext(ctx, query)
@@ -180,8 +262,6 @@ func (p ProductModel) DisplayAll() ([]Product, error) {
 		return nil, err
 	}
 	defer rows.Close()
-
-	var products []Product
 
 	for rows.Next() {
 		var product Product
@@ -196,7 +276,7 @@ func (p ProductModel) DisplayAll() ([]Product, error) {
 		return nil, err
 	}
 
-	return products, nil
+	return products, nil*/
 }
 
 func (p ProductModel) CheckIfProdExist(prodname string) (bool, error) {
