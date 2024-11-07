@@ -17,13 +17,16 @@ func (a *applicationDependencies) routes() http.Handler {
 	//405
 	router.MethodNotAllowed = http.HandlerFunc(a.methodNotAllowedResponse)
 	//routes
-	router.HandlerFunc(http.MethodGet, "/", a.Index)                                //root page
-	router.HandlerFunc(http.MethodGet, "/healthcheck", a.healthCheckHandler)        //healthcheck
+	//basic
+	router.HandlerFunc(http.MethodGet, "/", a.Index)                         //root page
+	router.HandlerFunc(http.MethodGet, "/healthcheck", a.healthCheckHandler) //healthcheck
+	//routes dealing with product----------------------------------------------------------------------------
 	router.HandlerFunc(http.MethodPost, "/product", a.createProduct)                //add product
 	router.HandlerFunc(http.MethodGet, "/product/:id", a.displayProductHandler)     //display product
 	router.HandlerFunc(http.MethodPatch, "/product/:id", a.updateProductHandler)    //update product
 	router.HandlerFunc(http.MethodDelete, "/product/:id", a.deleteProductHandler)   //delete product
 	router.HandlerFunc(http.MethodGet, "/products/all", a.displayAllProductHandler) //display all products
+	//routes dealing with reviews----------------------------------------------------------------------------
 
 	return a.recoverPanic(router)
 }

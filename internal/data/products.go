@@ -220,7 +220,7 @@ func (p ProductModel) DisplayAll() ([]Product, error) {
 	query := `
     SELECT 
         p.id, p.prodname, p.category, p.imgurl, p.addeddate, 
-        (SELECT AVG(r.rating) FROM prodratings r WHERE r.prodid = p.id) AS rating
+        ROUND((SELECT AVG(r.rating) FROM prodratings r WHERE r.prodid = p.id)) AS rating
     FROM 
         product p
     `
