@@ -31,6 +31,7 @@ type applicationDependencies struct {
 	config       serverConfig
 	logger       *slog.Logger //look more into this later
 	ProductModel data.ProductModel
+	ReviewModel  data.ReviewModel
 }
 
 func main() {
