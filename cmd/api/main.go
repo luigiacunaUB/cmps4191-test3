@@ -57,6 +57,7 @@ func main() {
 		config:       settings,
 		logger:       logger,
 		ProductModel: data.ProductModel{DB: db},
+		ReviewModel:  data.ReviewModel{DB: db},
 	}
 
 	//api server info

@@ -88,7 +88,7 @@ func (p ProductModel) Insert(product *Product, instruction bool) error {
 		}
 
 		//first query getting the product id in question to pass into a variable
-		firstquery := `SELECT id FROM product WHERE prodname=($1)`
+		firstquery := `SELECT id FROM product WHERE  prodname=($1)`
 		err = tx.QueryRow(firstquery, product.ProdName).Scan(&product.ID)
 		//incase it errors out
 		if err != nil {

@@ -1,11 +1,9 @@
-curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Samsung Galaxy S21","category": "Smartphone","imageurl": "http://example.com/images/galaxy_s21.jpg","ratings": 5}';
-curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Samsung Galaxy S21","category": "Smartphone","imageurl": "http://example.com/images/galaxy_s21.jpg","ratings": 3}';
-curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Samsung Galaxy S21","category": "Smartphone","imageurl": "http://example.com/images/galaxy_s21.jpg","ratings": 1}';
-curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Dyson V11 Vacuum","category": "Home Appliance","imageurl": "http://example.com/images/dyson_v11.jpg","ratings": 5}';
-curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Dyson V11 Vacuum","category": "Home Appliance","imageurl": "http://example.com/images/dyson_v11.jpg","ratings": 3}';
-curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Dyson V11 Vacuum","category": "Home Appliance","imageurl": "http://example.com/images/dyson_v11.jpg","ratings": 1}';
-curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Apple MacBook Air M1","category": "Laptop","imageurl": "http://example.com/images/macbook_air_m1.jpg","ratings": 5}';
-curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Apple MacBook Air M1","category": "Laptop","imageurl": "http://example.com/images/macbook_air_m1.jpg","ratings": 3}';
-curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Apple MacBook Air M1","category": "Laptop","imageurl": "http://example.com/images/macbook_air_m1.jpg","ratings": 1}';
-
-
+curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Samsung Galaxy S21","category": "Smartphone","imageurl": "http://example.com/images/galaxy_s21.jpg","rating": 5}';
+curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Samsung Galaxy S21","category": "Smartphone","imageurl": "http://example.com/images/galaxy_s21.jpg","rating": 3}';
+curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Samsung Galaxy S21","category": "Smartphone","imageurl": "http://example.com/images/galaxy_s21.jpg","rating": 1}';
+curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Dyson V11 Vacuum","category": "Home Appliance","imageurl": "http://example.com/images/dyson_v11.jpg","rating": 5}';
+curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Dyson V11 Vacuum","category": "Home Appliance","imageurl": "http://example.com/images/dyson_v11.jpg","rating": 3}';
+curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Dyson V11 Vacuum","category": "Home Appliance","imageurl": "http://example.com/images/dyson_v11.jpg","rating": 1}';
+curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Apple MacBook Air M1","category": "Laptop","imageurl": "http://example.com/images/macbook_air_m1.jpg","rating": 5}';
+curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Apple MacBook Air M1","category": "Laptop","imageurl": "http://example.com/images/macbook_air_m1.jpg","rating": 3}';
+curl -X POST http://localhost:4000/product -H "Content-Type: application/json" -d '{"productname": "Apple MacBook Air M1","category": "Laptop","imageurl": "http://example.com/images/macbook_air_m1.jpg","rating": 1}';
