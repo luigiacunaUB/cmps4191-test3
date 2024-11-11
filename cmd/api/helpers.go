@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/luigiacunaUB/cmps4191-test3/internal/validator"
 )
 
 type envelope map[string]any
@@ -122,4 +124,32 @@ func (a *applicationDependencies) prodAndIDChecks(w http.ResponseWriter, r *http
 		return true, productID, reviewID
 	}
 	return false, 0, 0
+}
+
+func (a *applicationDependencies) getSingleQueryParameter(queryParameters url.Values, key string, defaultValue string) string {
+	result := queryParameters.Get(key)
+	if result == "" {
+		return defaultValue
+	}
+	return result
+}
+
+func (a *applicationDependencies) getMulitpleQueryParameters(queryParameters url.Values, key string, defaultValue []string) []string {
+	result := queryParameters.Get(key)
+	if result == "" {
+		return defaultValue
+	}
+	return strings.Split(result, "/")
+}
+
+func (a *applicationDependencies) getSingleIntegerParameter(queryParameters url.Values, key string, defaultValue int, v *validator.Validator) int {
+	result := queryParameters.Get(key)
+	if result == "" {
+		return defaultValue
+	}
+	intValue, err := strconv.Atoi(result)
+	if err != nil {
+		v.AddError(key, "must be an integer value")
+	}
+	return intValue
 }
