@@ -202,13 +202,29 @@ func (a *applicationDependencies) displayAllReviewsHandler(w http.ResponseWriter
 
 	var queryParametersData struct {
 		Review string
+		data.Filters
 	}
 
 	queryParameters := r.URL.Query()
 
 	queryParametersData.Review = a.getSingleQueryParameter(queryParameters, "review", "")
 
-	review, err := a.ReviewModel.DisplayAllReviews(queryParametersData.Review)
+	v := validator.New()
+
+	queryParametersData.Filters.Page = a.getSingleIntegerParameter(queryParameters, "page", 1, v)
+	queryParametersData.Filters.PageSize = a.getSingleIntegerParameter(queryParameters, "page_size", 10, v)
+
+	queryParametersData.Filters.Sort = a.getSingleQueryParameter(queryParameters, "sort", "id")
+	queryParametersData.Filters.SortSafeList = []string{"id", "helpfulcounter", "-id", "-helpfulcounter"}
+
+	data.ValidateFilters(v, queryParametersData.Filters)
+	if !v.IsEmpty() {
+		a.logger.Info("Error is here")
+		a.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	review, metadata, err := a.ReviewModel.DisplayAllReviews(queryParametersData.Review, queryParametersData.Filters)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.QueryFail):
@@ -231,7 +247,8 @@ func (a *applicationDependencies) displayAllReviewsHandler(w http.ResponseWriter
 		}
 	} else {
 		data := envelope{
-			"Review": review,
+			"Review":    review,
+			"@metadata": metadata,
 		}
 		err = a.writeJSON(w, http.StatusOK, data, nil)
 		if err != nil {

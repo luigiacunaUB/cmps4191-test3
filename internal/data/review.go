@@ -11,6 +11,7 @@ package data
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -193,11 +194,32 @@ func (r ReviewModel) DeleteReview(ReviewID int) error {
 	return nil
 }
 
-func (r ReviewModel) DisplayAllReviews(review string) ([]Review, error) {
+func (r ReviewModel) DisplayAllReviews(review string, filters Filters) ([]Review, MetaData, error) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	logger.Info("Inside DisplayAll Func")
 	var reviews []Review
-	query := `SELECT
+
+	// Manually handle sorting logic to avoid ambiguity with "id" columns
+	var orderByClause string
+	switch filters.sortColumn() {
+	case "product_id":
+		orderByClause = "p.id"
+	case "product_name":
+		orderByClause = "p.prodname"
+	case "review_id":
+		orderByClause = "r.id"
+	default:
+		orderByClause = "r.id" // Default to review_id if no valid column
+	}
+
+	// Ensure sort direction is either "ASC" or "DESC"
+	sortDirection := filters.sortDirection()
+	if sortDirection != "ASC" && sortDirection != "DESC" {
+		sortDirection = "ASC" // Default to "ASC" if invalid
+	}
+
+	query := fmt.Sprintf(`SELECT
+		COUNT(*) OVER(),
     	p.id AS product_id,
     	p.prodname AS product_name,
     	r.id AS review_id,
@@ -209,32 +231,36 @@ func (r ReviewModel) DisplayAllReviews(review string) ([]Review, error) {
     	review r ON p.id = r.prodid
 	WHERE
     to_tsvector('english', r.review) @@ plainto_tsquery('english', $1)
-    OR $1 = ''`
+    OR $1 = '' 
+	ORDER BY %s %s, r.id ASC LIMIT $2 OFFSET $3`, orderByClause, filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	rows, err := r.DB.QueryContext(ctx, query, review)
+	rows, err := r.DB.QueryContext(ctx, query, review, filters.limit(), filters.offset())
 	if err != nil {
-		return nil, err
+		return nil, MetaData{}, err
 	}
 
 	defer rows.Close()
+	totalRecords := 0
 
 	for rows.Next() {
 		var review Review
-		err := rows.Scan(&review.ProdDid, &review.ProductName, &review.ID, &review.Review, &review.HelpfullCounter)
+		err := rows.Scan(&totalRecords, &review.ProdDid, &review.ProductName, &review.ID, &review.Review, &review.HelpfullCounter)
 		if err != nil {
-			return nil, err
+			return nil, MetaData{}, err
 		}
 		reviews = append(reviews, review)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, MetaData{}, err
 	}
 
-	return reviews, nil
+	metadata := calculateMetaData(totalRecords, filters.Page, filters.PageSize)
+
+	return reviews, metadata, nil
 
 }
 
