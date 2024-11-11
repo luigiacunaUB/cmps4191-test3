@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -198,7 +199,16 @@ func (a *applicationDependencies) deleteSpecficReviewHandler(w http.ResponseWrit
 
 func (a *applicationDependencies) displayAllReviewsHandler(w http.ResponseWriter, r *http.Request) {
 	a.logger.Info("Inside Display Handler")
-	review, err := a.ReviewModel.DisplayAllReviews()
+
+	var queryParametersData struct {
+		Review string
+	}
+
+	queryParameters := r.URL.Query()
+
+	queryParametersData.Review = a.getSingleQueryParameter(queryParameters, "review", "")
+
+	review, err := a.ReviewModel.DisplayAllReviews(queryParametersData.Review)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.QueryFail):
@@ -262,6 +272,47 @@ func (a *applicationDependencies) displayAllReviewsForSpecificProductHandler(w h
 		if err != nil {
 			a.serverErrorResponse(w, r, err)
 		}
+	}
+
+}
+
+func (a *applicationDependencies) incrementHelpfulCounter(w http.ResponseWriter, r *http.Request) {
+	a.logger.Info("Inside addHelpful Handler")
+	id, err := a.readIDParam(r)
+	if err != nil {
+		a.notFoundResponse(w, r)
+		return
+	}
+	var incomingData struct {
+		HelpfulAnswer *string `json:"helpful"`
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&incomingData)
+	if err != nil || incomingData.HelpfulAnswer == nil {
+		a.badRequestResponse(w, r, err)
+		return
+	}
+
+	v := validator.New()
+	data.ValidateHelpfulAnswer(v, *incomingData.HelpfulAnswer)
+	if !v.IsEmpty() {
+		a.failedValidationResponse(w, r, v.Errors)
+		return
+	} else {
+		a.logger.Info("Validation Pass")
+	}
+	pass := a.ReviewModel.HelpfulAnswerAdd(id)
+	if pass == false {
+		a.serverErrorResponse(w, r, err)
+	} else if pass == true {
+		data := envelope{
+			"message": "added  +1 to review",
+		}
+		err = a.writeJSON(w, http.StatusOK, data, nil)
+		if err != nil {
+			a.serverErrorResponse(w, r, err)
+		}
+
 	}
 
 }

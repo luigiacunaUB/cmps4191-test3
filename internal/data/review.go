@@ -39,10 +39,15 @@ func ValidateReview(v *validator.Validator, r ReviewModel, review *Review) {
 
 }
 
+// deprecated
 func ValidateRating(v *validator.Validator, r ReviewModel, review *Review) {
 	//check if the helpful counter is between 1 and 5
 	v.Check(review.HelpfullCounter >= 1 && review.HelpfullCounter <= 5, "rating", "must be between 1 and 5")
 
+}
+
+func ValidateHelpfulAnswer(v *validator.Validator, answer string) {
+	v.Check(answer == "yes" || answer == "Yes" || answer == "YES" || answer == "y" || answer == "Y", "helpful", "must be 'yes' or 'y'")
 }
 
 func (r ReviewModel) InsertReview(review *Review, instruction bool) error {
@@ -188,7 +193,7 @@ func (r ReviewModel) DeleteReview(ReviewID int) error {
 	return nil
 }
 
-func (r ReviewModel) DisplayAllReviews() ([]Review, error) {
+func (r ReviewModel) DisplayAllReviews(review string) ([]Review, error) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	logger.Info("Inside DisplayAll Func")
 	var reviews []Review
@@ -196,16 +201,20 @@ func (r ReviewModel) DisplayAllReviews() ([]Review, error) {
     	p.id AS product_id,
     	p.prodname AS product_name,
     	r.id AS review_id,
-    	r.review
+    	r.review,
+		COALESCE(r.helpfulcounter,0) AS helpfulcounter
 	FROM
     	product p
 	JOIN
-    	review r ON p.id = r.prodid`
+    	review r ON p.id = r.prodid
+	WHERE
+    to_tsvector('english', r.review) @@ plainto_tsquery('english', $1)
+    OR $1 = ''`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	rows, err := r.DB.QueryContext(ctx, query)
+	rows, err := r.DB.QueryContext(ctx, query, review)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +223,7 @@ func (r ReviewModel) DisplayAllReviews() ([]Review, error) {
 
 	for rows.Next() {
 		var review Review
-		err := rows.Scan(&review.ProdDid, &review.ProductName, &review.ID, &review.Review)
+		err := rows.Scan(&review.ProdDid, &review.ProductName, &review.ID, &review.Review, &review.HelpfullCounter)
 		if err != nil {
 			return nil, err
 		}
@@ -269,4 +278,21 @@ func (r ReviewModel) DisplayAllReviewsForProduct(productID int) ([]Review, error
 	}
 
 	return reviews, nil
+}
+
+func (r ReviewModel) HelpfulAnswerAdd(id int64) bool {
+	// Prepare SQL query to increment helpfulcounter for a specific review
+	query := `
+	 UPDATE review
+	 SET helpfulcounter = COALESCE(helpfulcounter, 0) + 1
+	 WHERE id = $1
+ `
+
+	// Execute the query
+	_, err := r.DB.Exec(query, id)
+	if err != nil {
+		return false
+	}
+
+	return true
 }

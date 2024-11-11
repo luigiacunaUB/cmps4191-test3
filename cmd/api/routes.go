@@ -31,8 +31,9 @@ func (a *applicationDependencies) routes() http.Handler {
 	router.HandlerFunc(http.MethodGet, "/product/:id/review/:id", a.displaySpecficReviewHandler)
 	router.HandlerFunc(http.MethodPost, "/product/:id/review/:id", a.updateSpecficReviewHandler)
 	router.HandlerFunc(http.MethodDelete, "/review/delete/:id", a.deleteSpecficReviewHandler)
-	router.HandlerFunc(http.MethodGet, "/allreviews", a.displayAllReviewsHandler)
+	router.HandlerFunc(http.MethodGet, "/allreviews", a.displayAllReviewsHandler) //this one
 	router.HandlerFunc(http.MethodGet, "/allreviews/product/:id", a.displayAllReviewsForSpecificProductHandler)
+	router.HandlerFunc(http.MethodPatch, "/inserthelpful/:id", a.incrementHelpfulCounter)
 
 	return a.recoverPanic(router)
 }
