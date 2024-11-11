@@ -1,7 +1,7 @@
 package data
 
 import (
-	"github.com/luigiacunaUB/internal/validator"
+	"github.com/luigiacunaUB/cmps4191-test3/internal/validator"
 )
 
 type Filters struct {

@@ -192,6 +192,7 @@ func (a *applicationDependencies) displayAllProductHandler(w http.ResponseWriter
 	var queryParametersData struct {
 		ProdName string
 		Category string
+		data.Filters
 	}
 
 	queryParameters := r.URL.Query()
@@ -199,8 +200,19 @@ func (a *applicationDependencies) displayAllProductHandler(w http.ResponseWriter
 	queryParametersData.ProdName = a.getSingleQueryParameter(queryParameters, "productname", "")
 	queryParametersData.Category = a.getSingleQueryParameter(queryParameters, "category", "")
 
+	v := validator.New()
+
+	queryParametersData.Filters.Page = a.getSingleIntegerParameter(queryParameters, "page", 1, v)
+	queryParametersData.Filters.PageSize = a.getSingleIntegerParameter(queryParameters, "page_size", 10, v)
+
+	data.ValidateFilters(v, queryParametersData.Filters)
+	if !v.IsEmpty() {
+		a.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
 	//products, err := a.ProductModel.DisplayAll()
-	products, err := a.ProductModel.DisplayAll(queryParametersData.ProdName, queryParametersData.Category)
+	products, err := a.ProductModel.DisplayAll(queryParametersData.ProdName, queryParametersData.Category, queryParametersData.Filters)
 
 	if err != nil {
 		switch {

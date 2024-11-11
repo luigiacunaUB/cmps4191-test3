@@ -205,7 +205,7 @@ func (p ProductModel) Delete(id int64) error {
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------
-func (p ProductModel) DisplayAll(productname string, category string) ([]Product, error) {
+func (p ProductModel) DisplayAll(productname string, category string, filters Filters) ([]Product, error) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	logger.Info("Inside DisplayAll")
 	var products []Product
@@ -235,7 +235,8 @@ WHERE
     OR $1 = '')
     AND 
     (to_tsvector('english', p.category) @@ plainto_tsquery('english', COALESCE($2, ''))
-    OR $2 = '');
+    OR $2 = '')
+	LIMIT $3 OFFSET $4
 `
 
 	// Set up a timeout context for the query
@@ -243,7 +244,7 @@ WHERE
 	defer cancel()
 
 	// Execute the query
-	rows, err := p.DB.QueryContext(ctx, query, productname, category)
+	rows, err := p.DB.QueryContext(ctx, query, productname, category, filters.limit(), filters.offset())
 	if err != nil {
 		return nil, err
 	}
