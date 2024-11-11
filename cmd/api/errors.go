@@ -37,10 +37,16 @@ func (a *applicationDependencies) methodNotAllowedResponse(w http.ResponseWriter
 	a.errorResponseJSON(w, r, http.StatusMethodNotAllowed, message)
 }
 
-func (a *applicationDependencies)badRequestResponse(w http.ResponseWriter, r *http.Request, err error){
-	a.errorResponseJSON(w,r,http.StatusBadRequest,err.Error())
+func (a *applicationDependencies) badRequestResponse(w http.ResponseWriter, r *http.Request, err error) {
+	a.errorResponseJSON(w, r, http.StatusBadRequest, err.Error())
 }
 
-func(a *applicationDependencies)failedValidationResponse(w http.ResponseWriter, r *http.Request, errors map[string]string){
-	a.errorResponseJSON(w,r,http.StatusUnprocessableEntity,errors)
+func (a *applicationDependencies) failedValidationResponse(w http.ResponseWriter, r *http.Request, errors map[string]string) {
+	a.errorResponseJSON(w, r, http.StatusUnprocessableEntity, errors)
+}
+
+func (a *applicationDependencies) rateLimitExceededResponse(w http.ResponseWriter, r *http.Request) {
+
+	message := "rate limit exceeded"
+	a.errorResponseJSON(w, r, http.StatusTooManyRequests, message)
 }

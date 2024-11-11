@@ -3,7 +3,7 @@ include .envrc
 .PHONY: run/api
 run/api:
 	@echo 'Running Appliation'
-	@go run ./cmd/api/ -port=4000 -env=development -db-dsn=$(AMAZON_DB_DSN)
+	@go run ./cmd/api/ -port=4000 -env=development -limiter-burst=5 limiter-rps=2 limiter-enabled=false -db-dsn=$(AMAZON_DB_DSN)
 
 
 #enter database

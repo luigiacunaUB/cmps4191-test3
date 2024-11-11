@@ -35,5 +35,5 @@ func (a *applicationDependencies) routes() http.Handler {
 	router.HandlerFunc(http.MethodGet, "/allreviews/product/:id", a.displayAllReviewsForSpecificProductHandler)
 	router.HandlerFunc(http.MethodPatch, "/inserthelpful/:id", a.incrementHelpfulCounter)
 
-	return a.recoverPanic(router)
+	return a.recoverPanic(a.rateLimit(router))
 }
