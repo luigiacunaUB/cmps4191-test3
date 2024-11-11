@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -236,9 +237,10 @@ WHERE
     OR $1 = '')
     AND 
     (to_tsvector('english', p.category) @@ plainto_tsquery('english', COALESCE($2, ''))
-    OR $2 = '')
-	LIMIT $3 OFFSET $4
-`
+    OR $2 = '')`
+	//LIMIT $3 OFFSET $4`
+
+	query += fmt.Sprintf(" ORDER BY %s %s, id ASC LIMIT $3 OFFSET $4", filters.sortColumn(), filters.sortDirection())
 
 	// Set up a timeout context for the query
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

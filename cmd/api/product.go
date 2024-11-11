@@ -205,6 +205,9 @@ func (a *applicationDependencies) displayAllProductHandler(w http.ResponseWriter
 	queryParametersData.Filters.Page = a.getSingleIntegerParameter(queryParameters, "page", 1, v)
 	queryParametersData.Filters.PageSize = a.getSingleIntegerParameter(queryParameters, "page_size", 10, v)
 
+	queryParametersData.Filters.Sort = a.getSingleQueryParameter(queryParameters, "sort", "id")
+	queryParametersData.Filters.SortSafeList = []string{"id", "category", "-id", "-category"}
+
 	data.ValidateFilters(v, queryParametersData.Filters)
 	if !v.IsEmpty() {
 		a.failedValidationResponse(w, r, v.Errors)
