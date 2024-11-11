@@ -102,6 +102,7 @@ func (a *applicationDependencies) displayProductHandler(w http.ResponseWriter, r
 
 }
 
+// ----------------------------------------------------------------------------------------------------------
 func (a *applicationDependencies) updateProductHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := a.readIDParam(r)
 	if err != nil {

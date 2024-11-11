@@ -88,3 +88,38 @@ func (a *applicationDependencies) readIDParam(r *http.Request) (int64, error) {
 	}
 	return id, nil
 }
+
+func (a *applicationDependencies) prodAndIDChecks(w http.ResponseWriter, r *http.Request) (bool, int, int) {
+	a.logger.Info(r.URL.String())
+	var pID, rID string
+	parts := strings.Split(r.URL.Path, "/")
+	//spit the url string to only grab the values needed
+	if len(parts) >= 5 {
+		pID = parts[2] // product ID is at index 2 in the path
+		rID = parts[4] // review ID is at index 4 in the path
+
+		fmt.Fprintf(w, "Product ID: %s\n", pID)
+		fmt.Fprintf(w, "Review ID: %s\n", rID)
+	}
+	var productID, reviewID int
+	productID, err := strconv.Atoi(pID)
+	reviewID, err = strconv.Atoi(rID)
+
+	exist, err := a.ReviewModel.CheckIfProdIDExist(productID)
+	if err != nil && exist == false {
+		a.serverErrorResponse(w, r, err) //need to update error to say product does not exist
+		return false, 0, 0
+	} else if err == nil && exist == true {
+		a.logger.Info("Product ID Pass")
+		return true, productID, reviewID
+	}
+	exist, err = a.ReviewModel.CheckIfReviewExist(reviewID)
+	if err != nil && exist == false {
+		a.serverErrorResponse(w, r, err) //need to update error to say review does not exist
+		return false, 0, 0
+	} else if err == nil && exist == true {
+		a.logger.Info("Review ID Pass")
+		return true, productID, reviewID
+	}
+	return false, 0, 0
+}

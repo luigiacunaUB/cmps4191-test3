@@ -85,7 +85,6 @@ func (r ReviewModel) CheckIfProdIDExist(prodid int) (bool, error) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	logger.Info("Inside CheckIfProdIDExist")
 	logger.Info("Product ID: ", prodid)
-	//query := `SELECT 1 FROM product WHERE id = $1 LIMIT 1`
 	query := `SELECT id FROM product WHERE id = $1 LIMIT 1`
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -104,4 +103,170 @@ func (r ReviewModel) CheckIfProdIDExist(prodid int) (bool, error) {
 	}
 	logger.Info("Exiting")
 	return true, nil
+}
+
+func (r ReviewModel) CheckIfReviewExist(reviewID int) (bool, error) {
+	// Initialize logger
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger.Info("Inside CheckIfReviewExist")
+	logger.Info("Review ID: ", reviewID)
+	query := `SELECT id FROM review WHERE id = $1 LIMIT 1`
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	logger.Info("Reaches Here One")
+	var exists bool
+	logger.Info("Reaches Here Two")
+	err := r.DB.QueryRowContext(ctx, query, reviewID).Scan(&exists)
+	logger.Info("Reaches Here Three")
+	logger.Info("Exist status: ", exists)
+	if err == nil && exists == true {
+		logger.Info("Review ID FOUND")
+		return true, nil
+	} else if err == nil && exists == false {
+		logger.Info("Review ID NOT FOUND")
+		return false, nil
+	}
+	logger.Info("Exiting")
+	return true, nil
+}
+func (r ReviewModel) DisplaySpecificReview(productID int, ReviewID int) (*Review, error) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger.Info("Inside DisplaySpecficReview Func")
+	tx, err := r.DB.Begin()
+	if err != nil {
+		logger.Error("Cannot begin Transaction")
+		return nil, err
+	}
+	review := &Review{}
+	//first query
+	firstquery := `SELECT id,prodname FROM product WHERE id=$1`
+	err = tx.QueryRow(firstquery, productID).Scan(&review.ProdDid, &review.ProductName)
+	if err != nil {
+		logger.Error("SELECT product FAILED ABORTING!")
+		return nil, err
+	}
+	//second query
+	secondquery := `SELECT id,review FROM review WHERE id=$1`
+	err = tx.QueryRow(secondquery, ReviewID).Scan(&review.ID, &review.Review)
+	err = tx.Commit()
+	if err != nil {
+		logger.Info("Error getting review info")
+		return nil, err
+	}
+	return review, nil
+
+}
+
+func (r ReviewModel) UpdateSpecificReview(ReviewID int, data string) error {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger.Info("Inside UpdateSpecficReview Func")
+
+	logger.Info("Review ID inside update sql", ReviewID)
+	logger.Info("data to update: ", data)
+
+	query := `UPDATE review SET review = $1 WHERE id = $2`
+	args := []any{data, ReviewID}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_, err := r.DB.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (r ReviewModel) DeleteReview(ReviewID int) error {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger.Info("Inside DeleteSpecficReview Func")
+	query := `DELETE FROM review WHERE id = $1`
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_, err := r.DB.ExecContext(ctx, query, ReviewID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r ReviewModel) DisplayAllReviews() ([]Review, error) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger.Info("Inside DisplayAll Func")
+	var reviews []Review
+	query := `SELECT
+    	p.id AS product_id,
+    	p.prodname AS product_name,
+    	r.id AS review_id,
+    	r.review
+	FROM
+    	product p
+	JOIN
+    	review r ON p.id = r.prodid`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := r.DB.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var review Review
+		err := rows.Scan(&review.ProdDid, &review.ProductName, &review.ID, &review.Review)
+		if err != nil {
+			return nil, err
+		}
+		reviews = append(reviews, review)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return reviews, nil
+
+}
+
+func (r ReviewModel) DisplayAllReviewsForProduct(productID int) ([]Review, error) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger.Info("Inside DisplayAllReviewsForProduct Func")
+
+	var reviews []Review
+	query := `SELECT
+                p.id AS product_id,
+                p.prodname AS product_name,
+                r.id AS review_id,
+                r.review
+              FROM
+                product p
+              JOIN
+                review r ON p.id = r.prodid
+              WHERE
+                p.id = $1`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := r.DB.QueryContext(ctx, query, productID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var review Review
+		err := rows.Scan(&review.ProdDid, &review.ProductName, &review.ID, &review.Review)
+		if err != nil {
+			return nil, err
+		}
+		reviews = append(reviews, review)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return reviews, nil
 }

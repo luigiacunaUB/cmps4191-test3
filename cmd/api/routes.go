@@ -27,7 +27,12 @@ func (a *applicationDependencies) routes() http.Handler {
 	router.HandlerFunc(http.MethodDelete, "/product/:id", a.deleteProductHandler)   //delete product
 	router.HandlerFunc(http.MethodGet, "/products/all", a.displayAllProductHandler) //display all products
 	//routes dealing with reviews----------------------------------------------------------------------------
-	router.HandlerFunc(http.MethodPost,"/addreview/products/:id",a.createReviewHandler)
+	router.HandlerFunc(http.MethodPost, "/addreview/products/:id", a.createReviewHandler)
+	router.HandlerFunc(http.MethodGet, "/product/:id/review/:id", a.displaySpecficReviewHandler)
+	router.HandlerFunc(http.MethodPost, "/product/:id/review/:id", a.updateSpecficReviewHandler)
+	router.HandlerFunc(http.MethodDelete, "/review/delete/:id", a.deleteSpecficReviewHandler)
+	router.HandlerFunc(http.MethodGet, "/allreviews", a.displayAllReviewsHandler)
+	router.HandlerFunc(http.MethodGet, "/allreviews/product/:id", a.displayAllReviewsForSpecificProductHandler)
 
 	return a.recoverPanic(router)
 }
