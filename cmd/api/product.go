@@ -189,7 +189,18 @@ func (a *applicationDependencies) deleteProductHandler(w http.ResponseWriter, r 
 }
 
 func (a *applicationDependencies) displayAllProductHandler(w http.ResponseWriter, r *http.Request) {
-	products, err := a.ProductModel.DisplayAll()
+	var queryParametersData struct {
+		ProdName string
+		Category string
+	}
+
+	queryParameters := r.URL.Query()
+
+	queryParametersData.ProdName = a.getSingleQueryParameter(queryParameters, "productname", "")
+	queryParametersData.Category = a.getSingleQueryParameter(queryParameters, "category", "")
+
+	//products, err := a.ProductModel.DisplayAll()
+	products, err := a.ProductModel.DisplayAll(queryParametersData.ProdName, queryParametersData.Category)
 
 	if err != nil {
 		switch {

@@ -109,6 +109,7 @@ func (p ProductModel) Insert(product *Product, instruction bool) error {
 
 }
 
+// -----------------------------------------------------------------------------------------------------------------------------
 func (p ProductModel) Get(id int64) (*Product, error) {
 	//GET: Gets the item info for a specfic item along with its average rating, coming from prodratings table
 	if id < 1 {
@@ -144,6 +145,7 @@ func (p ProductModel) Get(id int64) (*Product, error) {
 	return &product, nil
 }
 
+// ------------------------------------------------------------------------------------------------------------------------------------
 func (p ProductModel) Update(product *Product) error {
 	query := `UPDATE product
 			SET prodname = $1, category = $2, imgurl = $3
@@ -156,6 +158,7 @@ func (p ProductModel) Update(product *Product) error {
 	return p.DB.QueryRowContext(ctx, query, args...).Scan(&product.ID)
 }
 
+// --------------------------------------------------------------------------------------------------------------------------------------
 func (p ProductModel) Delete(id int64) error {
 	if id < 1 {
 		return ErrRecordNotFound
@@ -201,36 +204,46 @@ func (p ProductModel) Delete(id int64) error {
 
 }
 
-func (p ProductModel) DisplayAll() ([]Product, error) {
+// ------------------------------------------------------------------------------------------------------------------------------
+func (p ProductModel) DisplayAll(productname string, category string) ([]Product, error) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	logger.Info("Inside DisplayAll")
 	var products []Product
 	//---------------------------------------------------------------------------------
-	/*tx, err := p.DB.Begin()
-	if err != nil {
-		logger.Info("Cannot Begin Transaction")
-	}*/
-	/*selectQuery := `SELECT id,prodname,category,imgurl,addeddate FROM product`
-	err = tx.QueryRow(selectQuery).Scan(&product.ID, &product.ProdName, &product.Category, &product.ImgURL, &product.AddedDate)
-	if err != nil {
-		logger.Error("ERROR getting product info")
-	}*/
 
 	// Query to get all product data and the overall average rating for all products
-	query := `
-    SELECT 
-        p.id, p.prodname, p.category, p.imgurl, p.addeddate, 
-        ROUND((SELECT AVG(r.rating) FROM prodratings r WHERE r.prodid = p.id)) AS rating
-    FROM 
-        product p
-    `
+	//orginal query
+	/*query := `
+	  SELECT
+	      p.id, p.prodname, p.category, p.imgurl, p.addeddate,
+	      ROUND((SELECT AVG(r.rating) FROM prodratings r WHERE r.prodid = p.id)) AS rating
+	  FROM
+	      product p
+	  `*/
+
+	query := `SELECT 
+    p.id, 
+    p.prodname, 
+    p.category, 
+    p.imgurl, 
+    p.addeddate, 
+    ROUND((SELECT AVG(r.rating) FROM prodratings r WHERE r.prodid = p.id)) AS rating
+FROM 
+    product p
+WHERE 
+    (to_tsvector('english', p.prodname) @@ plainto_tsquery('english', COALESCE($1, ''))
+    OR $1 = '')
+    AND 
+    (to_tsvector('english', p.category) @@ plainto_tsquery('english', COALESCE($2, ''))
+    OR $2 = '');
+`
 
 	// Set up a timeout context for the query
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	// Execute the query
-	rows, err := p.DB.QueryContext(ctx, query)
+	rows, err := p.DB.QueryContext(ctx, query, productname, category)
 	if err != nil {
 		return nil, err
 	}
