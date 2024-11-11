@@ -205,7 +205,7 @@ func (p ProductModel) Delete(id int64) error {
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------
-func (p ProductModel) DisplayAll(productname string, category string, filters Filters) ([]Product, error) {
+func (p ProductModel) DisplayAll(productname string, category string, filters Filters) ([]Product, MetaData, error) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	logger.Info("Inside DisplayAll")
 	var products []Product
@@ -222,6 +222,7 @@ func (p ProductModel) DisplayAll(productname string, category string, filters Fi
 	  `*/
 
 	query := `SELECT 
+	COUNT (*) OVER() AS total_count,
     p.id, 
     p.prodname, 
     p.category, 
@@ -246,27 +247,30 @@ WHERE
 	// Execute the query
 	rows, err := p.DB.QueryContext(ctx, query, productname, category, filters.limit(), filters.offset())
 	if err != nil {
-		return nil, err
+		return nil, MetaData{}, err
 	}
 	defer rows.Close()
+	totalRecords := 0
 
 	// Loop through the rows and scan the results into the products slice
 	for rows.Next() {
 		var product Product
-		err := rows.Scan(&product.ID, &product.ProdName, &product.Category, &product.ImgURL, &product.AddedDate, &product.Rating)
+		err := rows.Scan(&totalRecords, &product.ID, &product.ProdName, &product.Category, &product.ImgURL, &product.AddedDate, &product.Rating)
 		if err != nil {
-			return nil, err
+			return nil, MetaData{}, err
 		}
 		products = append(products, product)
 	}
 
 	// Check for any error encountered during iteration
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, MetaData{}, err
 	}
 
+	metadata := calculateMetaData(totalRecords, filters.Page, filters.PageSize)
+
 	// Return the products slice
-	return products, nil
+	return products, metadata, nil
 
 	/*query := `SELECT id,prodname,category,imgurl,category,addeddate FROM product`
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

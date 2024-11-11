@@ -212,7 +212,7 @@ func (a *applicationDependencies) displayAllProductHandler(w http.ResponseWriter
 	}
 
 	//products, err := a.ProductModel.DisplayAll()
-	products, err := a.ProductModel.DisplayAll(queryParametersData.ProdName, queryParametersData.Category, queryParametersData.Filters)
+	products, metadata, err := a.ProductModel.DisplayAll(queryParametersData.ProdName, queryParametersData.Category, queryParametersData.Filters)
 
 	if err != nil {
 		switch {
@@ -236,7 +236,8 @@ func (a *applicationDependencies) displayAllProductHandler(w http.ResponseWriter
 		}
 	} else {
 		data := envelope{
-			"Product": products,
+			"Product":   products,
+			"@metadata": metadata,
 		}
 		err = a.writeJSON(w, http.StatusOK, data, nil)
 		if err != nil {
